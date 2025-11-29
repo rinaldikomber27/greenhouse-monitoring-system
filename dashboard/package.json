@@ -1,0 +1,14 @@
+{
+  "name": "mqtt-monitoring-dashboard",
+  "version": "1.0.0",
+  "description": "Real-time distributed monitoring dashboard with MQTT",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "mqtt": "^5.0.0",
+    "socket.io": "^4.6.0"
+  }
+}

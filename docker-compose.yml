@@ -1,0 +1,95 @@
+version: '3.8'
+
+services:
+  # MQTT Broker - Central message passing hub
+  mqtt-broker:
+    image: eclipse-mosquitto:2.0
+    container_name: mqtt-broker
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./broker/mosquitto.conf:/mosquitto/config/mosquitto.conf
+    networks:
+      - mqtt-network
+    restart: unless-stopped
+
+  # Edge Computing Node - Sensor data processing with threading
+  sensor-edge-1:
+    build: ./edge
+    container_name: edge-node-1
+    environment:
+      - MQTT_BROKER=mqtt-broker
+      - MQTT_PORT=1883
+      - NODE_ID=edge-1
+    depends_on:
+      - mqtt-broker
+    networks:
+      - mqtt-network
+    restart: unless-stopped
+
+  # Optional: Additional edge node for scalability demonstration
+  sensor-edge-2:
+    build: ./edge
+    container_name: edge-node-2
+    environment:
+      - MQTT_BROKER=mqtt-broker
+      - MQTT_PORT=1883
+      - NODE_ID=edge-2
+    depends_on:
+      - mqtt-broker
+    networks:
+      - mqtt-network
+    restart: unless-stopped
+
+  # Monitoring Dashboard - Real-time visualization
+  monitoring-dashboard:
+    build: ./dashboard
+    container_name: monitoring-dashboard
+    ports:
+      - "3000:3000"
+    environment:
+      - MQTT_BROKER=mqtt-broker
+      - MQTT_PORT=1883
+    depends_on:
+      - mqtt-broker
+    networks:
+      - mqtt-network
+    restart: unless-stopped
+
+  # Optional: MongoDB for data logging
+  db-logger:
+    image: mongo:6.0
+    container_name: db-logger
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_DATABASE=sensor_data
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - mqtt-network
+    restart: unless-stopped
+
+  # Data Logger Service - MQTT subscriber for persistence
+  data-logger:
+    build: ./logger
+    container_name: data-logger
+    environment:
+      - MQTT_BROKER=mqtt-broker
+      - MQTT_PORT=1883
+      - MONGO_HOST=db-logger
+      - MONGO_PORT=27017
+    depends_on:
+      - mqtt-broker
+      - db-logger
+    networks:
+      - mqtt-network
+    restart: unless-stopped
+
+networks:
+  mqtt-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
